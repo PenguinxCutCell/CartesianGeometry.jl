@@ -49,6 +49,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-julia-compiled-${{ matrix.julia }}-
 
+      - name: Ensure VofiJul (git dependency)
+        run: julia -e 'using Pkg; Pkg.add(url="https://github.com/PenguinxCutCell/VofiJul.jl.git")'
+
       - name: Install dependencies
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 

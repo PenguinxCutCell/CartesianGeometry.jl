@@ -1,5 +1,8 @@
 # CartesianGeometry
 
+![CI](https://github.com/PenguinxCutCell/CartesianGeometry.jl/actions/workflows/ci.yml/badge.svg)
+![Coverage](https://codecov.io/gh/PenguinxCutCell/CartesianGeometry.jl/branch/main/graph/badge.svg)
+
 CartesianGeometry.jl is a lightweight Julia library providing utilities for Cartesian-grid geometry operations. The package collects mesh and geometry helpers used by numerical methods that operate on structured Cartesian meshes, including routines for implicit integration, interfaces/borders, VOF initialization, and mesh utilities.
 
 **Features**
