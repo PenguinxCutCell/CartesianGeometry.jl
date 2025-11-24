@@ -1,0 +1,15 @@
+name = "CartesianGeometry"
+uuid = "5961ddb3-e46d-41f1-806c-0197ba873d0b"
+authors = ["Vincent Le Chenadec <vincentlechenadec@gmail.com> and contributors"]
+version = "0.1.1"
+
+[deps]
+ImplicitIntegration = "bc256489-3a69-4a66-afc4-127cc87e6182"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TiledIteration = "06e1c1a7-607b-532d-9fad-de7d9aa2abac"
+VofiJul = "e4b0aab4-58c8-425b-9d4c-54271c2045d0"
+Vofinit = "1beee101-8e09-4165-b3f9-a3e33534e38b"
+
+[compat]
+Test = "1.11.0"
