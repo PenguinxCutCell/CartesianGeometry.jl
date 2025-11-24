@@ -337,3 +337,91 @@ function integrate!(moms, ::Type{Tuple{1}}, f, xyz::NTuple{3}, bc; method=:vofi)
 
     return moms
 end
+
+# 4D surface
+function integrate!(moms, ::Type{Tuple{1}}, f, xyz::NTuple{4}, bc; method=:vofijul)
+    input = only.(axes.(xyz))
+    linear = LinearIndices(input)
+
+    x, y, z, w = xyz
+    xex = zeros(Cdouble, 4)
+
+    # x faces
+
+    output = input[1], droplast(input[2]), droplast(input[3]), droplast(input[4])
+    cartesian = CartesianIndices(output)
+
+    for index in cartesian
+        n = linear[index]
+        i, j, k, l = Tuple(index)
+
+        moms[1][n] = vofinit_dispatch!(method, xex, f, x[i],
+                                      SVector(y[j], y[j+1]),
+                                      SVector(z[k], z[k+1]),
+                                      SVector(w[l], w[l+1]))
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+
+    for index in halo
+        n = linear[index]
+
+        moms[1][n] = bc(eltype(moms[1]))
+    end
+
+    # y faces
+    output = droplast(input[1]), input[2], droplast(input[3]), droplast(input[4])
+    cartesian = CartesianIndices(output)
+    for index in cartesian
+        n = linear[index]
+        i, j, k, l = Tuple(index)
+
+        moms[2][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      y[j],
+                                      SVector(z[k], z[k+1]),
+                                      SVector(w[l], w[l+1]))
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+
+        moms[2][n] = bc(eltype(moms[2]))
+    end
+
+    # z faces
+    output = droplast(input[1]), droplast(input[2]), input[3], droplast(input[4])
+    cartesian = CartesianIndices(output)
+    for index in cartesian
+        n = linear[index]
+        i, j, k, l = Tuple(index)
+        moms[3][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      SVector(y[j], y[j+1]),
+                                      z[k],
+                                      SVector(w[l], w[l+1]))
+    end
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[3][n] = bc(eltype(moms[3]))
+    end
+    
+    # w faces
+    output = droplast(input[1]), droplast(input[2]), droplast(input[3]), input[4]
+    cartesian = CartesianIndices(output)
+    for index in cartesian
+        n = linear[index]
+        i, j, k, l = Tuple(index)
+        moms[4][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      SVector(y[j], y[j+1]),
+                                      SVector(z[k], z[k+1]),
+                                      w[l])
+    end
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[4][n] = bc(eltype(moms[4]))
+    end
+
+    return moms
+end

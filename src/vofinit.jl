@@ -126,7 +126,7 @@ function vofinit!(xex, f, x::Number, y::SVector{2}, z::SVector{2}; nex=Cint.((1,
     h0 = Cdouble.((y[2]-y[1], z[2]-z[1], one(val)))
 
     nex = Cint.((0, 0))
-    val * vofi_getcc(backend, (yval, zval) -> f(x, yval, zval), x0, h0, xex, 2; nex=nex)
+    val * vofi_getcc(backend, (yval, zval,_) -> f(x, yval, zval), x0, h0, xex, 2; nex=nex)
 end
 
 function vofinit!(xex, f, x::SVector{2}, y::Number, z::SVector{2}; nex=Cint.((1, 1)), backend=:vofi)
@@ -141,7 +141,7 @@ function vofinit!(xex, f, x::SVector{2}, y::Number, z::SVector{2}; nex=Cint.((1,
     h0 = Cdouble.((z[2]-z[1], x[2]-x[1], one(val)))
 
     nex = Cint.((0, 0))
-    val * vofi_getcc(backend, (zval, xval) -> f(xval, y, zval), x0, h0, xex, 2; nex=nex)
+    val * vofi_getcc(backend, (zval, xval, _) -> f(xval, y, zval), x0, h0, xex, 2; nex=nex)
 end
 
 function vofinit!(xex, f, x::SVector{2}, y::SVector{2}, z::Number; nex=Cint.((1, 1)), backend=:vofi)
@@ -156,7 +156,7 @@ function vofinit!(xex, f, x::SVector{2}, y::SVector{2}, z::Number; nex=Cint.((1,
     h0 = Cdouble.((x[2]-x[1], y[2]-y[1], one(val)))
 
     nex = Cint.((0, 0))
-    val * vofi_getcc(backend, (xval, yval) -> f(xval, yval, z), x0, h0, xex, 2; nex=nex)
+    val * vofi_getcc(backend, (xval, yval, _) -> f(xval, yval, z), x0, h0, xex, 2; nex=nex)
 end
 
 """
