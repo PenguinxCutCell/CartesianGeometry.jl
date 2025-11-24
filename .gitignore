@@ -1,4 +1,4 @@
-Manifest.toml
+/Manifest.toml
 *.swp
 .DS_Store
 .vscode
