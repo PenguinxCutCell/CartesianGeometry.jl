@@ -36,7 +36,7 @@ surf = integrate(Tuple{1}, levelset, xyz, T, zero)
 @assert all(isequal.(length.(surf), prod(length.(universe))))
 =#
 
-V, bary, interface_length, cell_types = integrate(Tuple{0}, levelset, xyz, T, nan)
+V, bary, interface_length, cell_types, bary_interface = integrate(Tuple{0}, levelset, xyz, T, nan; method=:vofi)
 As = integrate(Tuple{1}, levelset, xyz, T, nan)
 
 Ws = integrate(Tuple{0}, levelset, xyz, T, nan, bary)
@@ -47,6 +47,7 @@ Bs = integrate(Tuple{1}, levelset, xyz, T, nan, bary)
 @show V
 @show bary
 @show interface_length
+@show bary_interface
 
 # Calculate Perimeter of the circle
 # Remove NaN values

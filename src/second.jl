@@ -271,7 +271,7 @@ function integrate!(moms, ::Type{Tuple{0}},
     linear = LinearIndices(input)
 
     x, y, z, w = xyz
-    xex = zeros(Cdouble, 4)
+    xex = zeros(Cdouble, length(xyz) + 1)
 
     # x faces
 
@@ -560,7 +560,7 @@ function integrate!(moms, ::Type{Tuple{1}},
     input = only.(axes.(xyz))
     linear = LinearIndices(input)
     x, y, z, w = xyz
-    xex = zeros(Cdouble, 4)
+    xex = zeros(Cdouble, length(xyz) + 1)
     # x faces
     output = droplast(input[1]), droplast(input[2]), droplast(input[3]), droplast(input[4])
     cartesian = CartesianIndices(output)

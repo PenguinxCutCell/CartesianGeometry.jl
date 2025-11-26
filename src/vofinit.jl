@@ -197,6 +197,9 @@ Call Vofi extended for exact 4D integration.
 
 """
 function vofinit!(xex, f, x::SVector, y::SVector, z::SVector, w::SVector; nex=Cint.((1, 1)), backend=:vofi)
+    # Ensure storage can hold barycenters plus interface measure in 4D
+    _ensure_xex_length!(xex, (length(nex) >= 2 && nex[2] > 0) ? 5 : 4)
+
     t = SArray{Tuple{2,2,2,2}}(f(i, j, k, l) for i in x, j in y, k in z, l in w)
 
     val = (x[2] - x[1]) * (y[2] - y[1]) * (z[2] - z[1]) * (w[2] - w[1])
@@ -284,6 +287,25 @@ end
 
 const DEFAULT_NPT = Cint.((4, 4, 4, 4))
 const DEFAULT_NVIS = Cint.((0, 0))
+
+@inline function _ensure_xex_length!(xex, needed)
+    length(xex) >= needed && return xex
+    resize!(xex, needed)
+    return xex
+end
+
+function interface_centroid(backend, f, args...)
+    N = length(args)
+    if backend === :vofijul
+        x0 = Cdouble.(first.(args))
+        h0 = Cdouble.(last.(args) .- first.(args))
+        c = VofiJul.vofi_interface_centroid(_wrap_vofijul_integrand(f, N), nothing, x0, h0, N)
+        return SVector{N, eltype(first(args))}(c)
+    elseif backend === :vofi
+        return nothing
+    end
+    throw(ArgumentError("Unsupported VOF backend: $backend"))
+end
 
 function normalize_vofi_backend(method)
     if method === :vofijul || method === VofiJul

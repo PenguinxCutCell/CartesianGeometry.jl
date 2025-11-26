@@ -56,7 +56,7 @@ for res in resolutions
     mesh_3d = create_mesh_3d(res, res, res)
     
     t_start = time()
-    V, _, interface_area, _ = integrate(Tuple{0}, levelset_sphere, mesh_3d, T, zero)
+    V, _, interface_area, _, _ = integrate(Tuple{0}, levelset_sphere, mesh_3d, T, zero)
     t_elapsed = time() - t_start
     
     numerical_volume = sum(V)

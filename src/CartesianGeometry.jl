@@ -11,7 +11,7 @@ using VofiJul
 export nan
 export HyperSphere
 export collocated, staggered
-export integrate, integrate!, get_cell_type
+export integrate, integrate!, integrate_centroid, get_cell_type
 
 include("utils.jl")
 include("zoo.jl")

@@ -59,9 +59,22 @@ function integrate(::Type{Tuple{0}}, f, xyz, T, bc; method=:vofi)
     v = Vector{T}(undef, len)
     bary = Vector{SVector{N,T}}(undef, len)
     interface_norm = Vector{T}(undef, len)
-    cell_types = Vector{T}(undef, len) 
+    cell_types = Vector{T}(undef, len)
+    bary_interface = Vector{SVector{N,T}}(undef, len)
 
-    integrate!((v, bary, interface_norm, cell_types), Tuple{0}, f, xyz, bc; method=method)
+    integrate!((v, bary, interface_norm, cell_types, bary_interface), Tuple{0}, f, xyz, bc; method=method)
+end
+
+"""
+    integrate_centroid(f, xyz, T, bc; method=:vofi)
+
+Compute the interface centroid in each cell (when available from the backend) by
+leveraging `integrate(Tuple{0}, ...)`. Falls back to `bc` wherever the centroid
+cannot be computed (e.g. with the C backend).
+"""
+function integrate_centroid(f, xyz, T, bc; method=:vofi)
+    _, _, _, _, bary_interface = integrate(Tuple{0}, f, xyz, T, bc; method=method)
+    return bary_interface
 end
 
 # ND volume
@@ -74,7 +87,7 @@ end
         linear = LinearIndices(input)
         cartesian = CartesianIndices(output)
 
-        (v, bary, interface_norm, cell_types) = moms
+        (v, bary, interface_norm, cell_types, bary_interface) = moms
         @ntuple($N, x) = xyz
         xex = zeros(Cdouble, 4)
         backend = normalize_vofi_backend(method)
@@ -83,6 +96,7 @@ end
             n = linear[index]
             @ntuple($N, i) = Tuple(index)
             @nextract($N, y, d -> SVector(x_d[i_d], x_d[i_d+1]))
+            coords = @ntuple($N, y)
             
             # Utiliser la méthode spécifiée
             v[n] = @ncall($N, vofinit_dispatch!, backend, xex, f, y)
@@ -91,6 +105,13 @@ end
             
             # Déterminer le type de cellule
             cell_types[n] = @ncall($N, compute_cell_type, backend, f, y)
+
+            centroid = interface_centroid(backend, f, coords...)
+            if centroid === nothing
+                bary_interface[n] = bc(eltype(bary_interface))
+            else
+                bary_interface[n] = centroid
+            end
         end
 
         # boundary conditions
@@ -103,6 +124,7 @@ end
             bary[n] = bc(eltype(bary))
             interface_norm[n] = bc(eltype(interface_norm))
             cell_types[n] = bc(eltype(cell_types))
+            bary_interface[n] = bc(eltype(bary_interface))
         end
 
         return moms
