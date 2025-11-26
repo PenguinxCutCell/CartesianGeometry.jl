@@ -84,6 +84,24 @@ Variables returned:
 - `Ws` : staggered volumes
 - `Bs` : centroid face-area-like quantities
 
+Simple routine: `bary_interface`
+
+- The `integrate` call that returns cell capacities can also return an interface centroid per cell as a fifth output. Example:
+
+```julia
+V, bary, interface_length, cell_types, bary_interface = integrate(Tuple{0}, levelset, xyz, T, nan)
+```
+
+- `bary_interface` is a `Vector{SVector{N,T}}` holding the centroid of the detected interface inside each cell where available, or the boundary value (`bc`) when not available.
+
+- There is also a convenience helper that returns only the interface centroids:
+
+```julia
+bary_if = integrate_centroid(levelset, xyz, T, nan; method=:vofijul)
+```
+
+Use `method=:vofijul` for higher-dimensional cases (4D) when the julia backend is needed.
+
 
 **Repository Structure**
 - `src/` : package source files (`CartesianGeometry.jl`, `mesh.jl`, `implicitint.jl`, `border.jl`, `vofinit.jl`, `utils.jl`, etc.).

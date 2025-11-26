@@ -25,8 +25,7 @@ end
     As = integrate(Tuple{1}, levelset, (grid,), T, nan)
     Ws = integrate(Tuple{0}, levelset, (grid,), T, nan, bary)
     Bs = integrate(Tuple{1}, levelset, (grid,), T, nan, bary)
-    println(typeof(bary_interface))
-    println(bary_interface)
+
     @test length(V) == length(bary) == length(interface_length) == length(cell_types) == length(bary_interface) == length(grid) 
     @test length(As) == length(Ws) == length(Bs)
 
@@ -47,8 +46,7 @@ end
     As = integrate(Tuple{1}, levelset, grid, T, nan)
     Ws = integrate(Tuple{0}, levelset, grid, T, nan, bary)
     Bs = integrate(Tuple{1}, levelset, grid, T, nan, bary)
-    println(typeof(bary_interface))
-    println(bary_interface)
+ 
     @test length(V) == length(bary) == length(interface_length) == length(cell_types) == length(bary_interface) == length(grid[1]) * length(grid[2])
     @test length(As) == length(Ws) == length(Bs) == length(grid)
 
@@ -71,8 +69,7 @@ end
     As = integrate(Tuple{1}, levelset, xyz, T, nan)
     Ws = integrate(Tuple{0}, levelset, xyz, T, nan, bary)
     Bs = integrate(Tuple{1}, levelset, xyz, T, nan, bary)
-    println(typeof(bary_interface))
-    println(bary_interface)
+
     @test length(V) == length(bary) == length(interface_area) == length(cell_types) == length(bary_interface)
     @test length(As) == length(Ws) == length(Bs) == length(xyz)
 
@@ -96,8 +93,7 @@ end
     As = integrate(Tuple{1}, levelset, xyzw, T, nan; method=:vofijul)
     Ws = integrate(Tuple{0}, levelset, xyzw, T, nan, bary; method=:vofijul)
     Bs = integrate(Tuple{1}, levelset, xyzw, T, nan, bary; method=:vofijul)
-    println(typeof(bary_interface))
-    println(bary_interface)
+
     @test length(V) == length(bary) == length(interface_hyperarea) == length(cell_types) == length(bary_interface)
     @test length(As) == length(Ws) == length(Bs) == length(xyzw)
 
@@ -161,7 +157,7 @@ end
     f1(x) = x - 0.5
     _, _, _, _, bary_if_1d = CartesianGeometry.integrate(Tuple{0}, f1, grid1, Float64, nan; method=:vofijul)
     @test isapprox(bary_if_1d[1][1], 0.5; atol=1e-6, rtol=1e-6)
-    println(bary_if_1d)
+
     # 2D: plane x + y = 1 intersects square -> segment centroid at (0.5, 0.5)
     grid2 = (0.0:1.0:1.0, 0.0:1.0:1.0)
     f2(x, y) = x + y - 1.0
