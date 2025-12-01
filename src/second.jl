@@ -1040,7 +1040,7 @@ function integrate_threaded!(moms, ::Type{Tuple{1}},
         i, j = Tuple(index)
         xex = zeros(Cdouble, 4)
 
-        moms[2][n] = vofinit!(xex, f,
+        moms[2][n] = vofinit_dispatch!(method, xex, f,
                               SVector(x[i], x[i+1]),
                               bary[n][2])
     end
