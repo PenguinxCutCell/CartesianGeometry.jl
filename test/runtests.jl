@@ -191,3 +191,106 @@ end
     @test isapprox(bary_if_sphere[1][3], 0.5; atol=1e-6, rtol=1e-6)
     @test isapprox(bary_if_sphere[1][4], 0.5; atol=1e-6, rtol=1e-6)
 end
+
+#####################################################################
+# THREADED VERSIONS TESTS
+#####################################################################
+
+@testset "Threaded 2D hyper-sphere capacities" begin
+    grid = (collect(0.0:0.05:1.0), collect(0.0:0.05:1.0))
+    R = 0.4
+    levelset = HyperSphere(R, (0.5, 0.5))
+
+    # Compare serial vs threaded
+    V_serial, bary_serial, interface_serial, cell_types_serial, bary_interface_serial = integrate(Tuple{0}, levelset, grid, T, nan)
+    V_threaded, bary_threaded, interface_threaded, cell_types_threaded, bary_interface_threaded = integrate_threaded(Tuple{0}, levelset, grid, T, nan)
+
+    # Compare non-NaN values (valid cells)
+    for i in eachindex(V_serial)
+        if !isnan(V_serial[i])
+            @test isapprox(V_serial[i], V_threaded[i]; rtol=1e-10)
+        else
+            @test isnan(V_threaded[i])
+        end
+    end
+    
+    # Test Tuple{1} integration
+    As_serial = integrate(Tuple{1}, levelset, grid, T, nan)
+    As_threaded = integrate_threaded(Tuple{1}, levelset, grid, T, nan)
+    
+    for d in eachindex(As_serial)
+        for i in eachindex(As_serial[d])
+            if !isnan(As_serial[d][i])
+                @test isapprox(As_serial[d][i], As_threaded[d][i]; rtol=1e-10)
+            else
+                @test isnan(As_threaded[d][i])
+            end
+        end
+    end
+end
+
+@testset "Threaded 3D hyper-sphere capacities" begin
+    universe = (-1:11, -1:11, -1:11)
+    node = (1:9, 1:9, 1:9)
+    xyz = collocated.(identity, universe, node)
+    R = 0.25
+    levelset = HyperSphere(R, (0.5, 0.5, 0.5))
+
+    # Compare serial vs threaded for first kind
+    V_serial, bary_serial, interface_serial, cell_types_serial, bary_interface_serial = integrate(Tuple{0}, levelset, xyz, T, nan)
+    V_threaded, bary_threaded, interface_threaded, cell_types_threaded, bary_interface_threaded = integrate_threaded(Tuple{0}, levelset, xyz, T, nan)
+
+    # Compare non-NaN values (valid cells)
+    for i in eachindex(V_serial)
+        if !isnan(V_serial[i])
+            @test isapprox(V_serial[i], V_threaded[i]; rtol=1e-10)
+        else
+            @test isnan(V_threaded[i])
+        end
+    end
+    
+    # Test second kind integration
+    Ws_serial = integrate(Tuple{0}, levelset, xyz, T, nan, bary_serial)
+    Ws_threaded = integrate_threaded(Tuple{0}, levelset, xyz, T, nan, bary_threaded)
+
+    for d in eachindex(Ws_serial)
+        for i in eachindex(Ws_serial[d])
+            if !isnan(Ws_serial[d][i])
+                @test isapprox(Ws_serial[d][i], Ws_threaded[d][i]; rtol=1e-10)
+            else
+                @test isnan(Ws_threaded[d][i])
+            end
+        end
+    end
+    
+    # Test Tuple{1} integration for first kind
+    As_serial = integrate(Tuple{1}, levelset, xyz, T, nan)
+    As_threaded = integrate_threaded(Tuple{1}, levelset, xyz, T, nan)
+    
+    for d in eachindex(As_serial)
+        for i in eachindex(As_serial[d])
+            if !isnan(As_serial[d][i])
+                @test isapprox(As_serial[d][i], As_threaded[d][i]; rtol=1e-10)
+            else
+                @test isnan(As_threaded[d][i])
+            end
+        end
+    end
+end
+
+@testset "Threaded results correctness" begin
+    # Test that threaded version produces correct results (not just matching serial)
+    grid = (collect(0.0:0.05:1.0), collect(0.0:0.05:1.0))
+    R = 0.4
+    levelset = HyperSphere(R, (0.5, 0.5))
+    
+    V_threaded, bary_threaded, interface_threaded, cell_types_threaded, _ = integrate_threaded(Tuple{0}, levelset, grid, T, nan)
+    
+    # Test volume computation
+    @test sum(V_threaded[.!isnan.(V_threaded)]) ≈ π * R^2 atol=1e-6
+    
+    # Test interface length
+    interface_vals = filter(!isnan, interface_threaded)
+    @test !isempty(interface_vals)
+    @test isapprox(sum(interface_vals), 2 * π * R; atol=1e-6)
+end

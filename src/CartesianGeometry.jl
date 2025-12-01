@@ -12,6 +12,7 @@ export nan
 export HyperSphere
 export collocated, staggered
 export integrate, integrate!, integrate_centroid, get_cell_type
+export integrate_threaded, integrate_threaded!
 
 include("utils.jl")
 include("zoo.jl")

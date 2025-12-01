@@ -1,7 +1,7 @@
 name = "CartesianGeometry"
 uuid = "5961ddb3-e46d-41f1-806c-0197ba873d0b"
-authors = ["Vincent Le Chenadec <vincentlechenadec@gmail.com> and contributors"]
 version = "0.1.1"
+authors = ["Vincent Le Chenadec <vincentlechenadec@gmail.com> and contributors"]
 
 [deps]
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
@@ -12,3 +12,4 @@ Vofinit = "1beee101-8e09-4165-b3f9-a3e33534e38b"
 
 [compat]
 Test = "1.11.0"
+VofiJul = "0.1.0"
