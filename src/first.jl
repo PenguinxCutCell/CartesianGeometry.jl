@@ -447,3 +447,501 @@ function integrate!(moms, ::Type{Tuple{1}}, f, xyz::NTuple{4}, bc; method=:vofij
 
     return moms
 end
+
+#####################################################################
+# THREADED VERSIONS
+#####################################################################
+
+"""
+    integrate_threaded(Tuple{0}, f, xyz, T, bc; method=:vofi)
+
+Multithreaded version of `integrate(Tuple{0}, ...)`.
+Computes volume-specific (`Tuple{0}`) apertures of the first kind using multiple threads.
+
+See [`integrate`](@ref) for more details.
+"""
+function integrate_threaded(::Type{Tuple{0}}, f, xyz, T, bc; method=:vofi)
+    N, len = length(xyz), prod(length.(xyz))
+
+    v = Vector{T}(undef, len)
+    bary = Vector{SVector{N,T}}(undef, len)
+    interface_norm = Vector{T}(undef, len)
+    cell_types = Vector{T}(undef, len)
+    bary_interface = Vector{SVector{N,T}}(undef, len)
+
+    integrate_threaded!((v, bary, interface_norm, cell_types, bary_interface), Tuple{0}, f, xyz, bc; method=method)
+end
+
+# 1D volume - threaded version
+function integrate_threaded!(moms, ::Type{Tuple{0}},
+                              f, xyz::NTuple{1}, bc; method=:vofi)
+    input = only.(axes.(xyz))
+    output = droplast.(input)
+    linear = LinearIndices(input)
+    cartesian = CartesianIndices(output)
+
+    (v, bary, interface_norm, cell_types, bary_interface) = moms
+    x, = xyz
+    backend = normalize_vofi_backend(method)
+
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, = Tuple(index)
+        y1 = SVector(x[i], x[i+1])
+        coords = (y1,)
+        
+        xex = zeros(Cdouble, 4)
+        
+        v[n] = vofinit_dispatch!(backend, xex, f, y1)
+        bary[n] = SVector(xex[1])
+        interface_norm[n] = xex[end]
+        
+        cell_types[n] = compute_cell_type(backend, f, y1)
+
+        centroid = interface_centroid(backend, f, coords...)
+        if centroid === nothing
+            bary_interface[n] = bc(eltype(bary_interface))
+        else
+            bary_interface[n] = centroid
+        end
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+
+    for index in halo
+        n = linear[index]
+        v[n] = bc(eltype(v))
+        bary[n] = bc(eltype(bary))
+        interface_norm[n] = bc(eltype(interface_norm))
+        cell_types[n] = bc(eltype(cell_types))
+        bary_interface[n] = bc(eltype(bary_interface))
+    end
+
+    return moms
+end
+
+# 2D volume - threaded version
+function integrate_threaded!(moms, ::Type{Tuple{0}},
+                              f, xyz::NTuple{2}, bc; method=:vofi)
+    input = only.(axes.(xyz))
+    output = droplast.(input)
+    linear = LinearIndices(input)
+    cartesian = CartesianIndices(output)
+
+    (v, bary, interface_norm, cell_types, bary_interface) = moms
+    x1, x2 = xyz
+    backend = normalize_vofi_backend(method)
+
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i1, i2 = Tuple(index)
+        y1 = SVector(x1[i1], x1[i1+1])
+        y2 = SVector(x2[i2], x2[i2+1])
+        coords = (y1, y2)
+        
+        xex = zeros(Cdouble, 4)
+        
+        v[n] = vofinit_dispatch!(backend, xex, f, y1, y2)
+        bary[n] = SVector(xex[1], xex[2])
+        interface_norm[n] = xex[end]
+        
+        cell_types[n] = compute_cell_type(backend, f, y1, y2)
+
+        centroid = interface_centroid(backend, f, coords...)
+        if centroid === nothing
+            bary_interface[n] = bc(eltype(bary_interface))
+        else
+            bary_interface[n] = centroid
+        end
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+
+    for index in halo
+        n = linear[index]
+        v[n] = bc(eltype(v))
+        bary[n] = bc(eltype(bary))
+        interface_norm[n] = bc(eltype(interface_norm))
+        cell_types[n] = bc(eltype(cell_types))
+        bary_interface[n] = bc(eltype(bary_interface))
+    end
+
+    return moms
+end
+
+# 3D volume - threaded version
+function integrate_threaded!(moms, ::Type{Tuple{0}},
+                              f, xyz::NTuple{3}, bc; method=:vofi)
+    input = only.(axes.(xyz))
+    output = droplast.(input)
+    linear = LinearIndices(input)
+    cartesian = CartesianIndices(output)
+
+    (v, bary, interface_norm, cell_types, bary_interface) = moms
+    x1, x2, x3 = xyz
+    backend = normalize_vofi_backend(method)
+
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i1, i2, i3 = Tuple(index)
+        y1 = SVector(x1[i1], x1[i1+1])
+        y2 = SVector(x2[i2], x2[i2+1])
+        y3 = SVector(x3[i3], x3[i3+1])
+        coords = (y1, y2, y3)
+        
+        xex = zeros(Cdouble, 4)
+        
+        v[n] = vofinit_dispatch!(backend, xex, f, y1, y2, y3)
+        bary[n] = SVector(xex[1], xex[2], xex[3])
+        interface_norm[n] = xex[end]
+        
+        cell_types[n] = compute_cell_type(backend, f, y1, y2, y3)
+
+        centroid = interface_centroid(backend, f, coords...)
+        if centroid === nothing
+            bary_interface[n] = bc(eltype(bary_interface))
+        else
+            bary_interface[n] = centroid
+        end
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+
+    for index in halo
+        n = linear[index]
+        v[n] = bc(eltype(v))
+        bary[n] = bc(eltype(bary))
+        interface_norm[n] = bc(eltype(interface_norm))
+        cell_types[n] = bc(eltype(cell_types))
+        bary_interface[n] = bc(eltype(bary_interface))
+    end
+
+    return moms
+end
+
+# 4D volume - threaded version
+function integrate_threaded!(moms, ::Type{Tuple{0}},
+                              f, xyz::NTuple{4}, bc; method=:vofijul)
+    input = only.(axes.(xyz))
+    output = droplast.(input)
+    linear = LinearIndices(input)
+    cartesian = CartesianIndices(output)
+
+    (v, bary, interface_norm, cell_types, bary_interface) = moms
+    x1, x2, x3, x4 = xyz
+    backend = normalize_vofi_backend(method)
+
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i1, i2, i3, i4 = Tuple(index)
+        y1 = SVector(x1[i1], x1[i1+1])
+        y2 = SVector(x2[i2], x2[i2+1])
+        y3 = SVector(x3[i3], x3[i3+1])
+        y4 = SVector(x4[i4], x4[i4+1])
+        coords = (y1, y2, y3, y4)
+        
+        xex = zeros(Cdouble, 5)
+        
+        v[n] = vofinit_dispatch!(backend, xex, f, y1, y2, y3, y4)
+        bary[n] = SVector(xex[1], xex[2], xex[3], xex[4])
+        interface_norm[n] = xex[end]
+        
+        cell_types[n] = compute_cell_type(backend, f, y1, y2, y3, y4)
+
+        centroid = interface_centroid(backend, f, coords...)
+        if centroid === nothing
+            bary_interface[n] = bc(eltype(bary_interface))
+        else
+            bary_interface[n] = centroid
+        end
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+
+    for index in halo
+        n = linear[index]
+        v[n] = bc(eltype(v))
+        bary[n] = bc(eltype(bary))
+        interface_norm[n] = bc(eltype(interface_norm))
+        cell_types[n] = bc(eltype(cell_types))
+        bary_interface[n] = bc(eltype(bary_interface))
+    end
+
+    return moms
+end
+
+"""
+    integrate_threaded(Tuple{1}, f, xyz, T, bc; method=:vofi)
+
+Multithreaded version of `integrate(Tuple{1}, ...)`.
+Computes area-specific (`Tuple{1}`) apertures of the first kind using multiple threads.
+
+See [`integrate`](@ref) for more details.
+"""
+function integrate_threaded(::Type{Tuple{1}}, f, xyz, T, bc; method=:vofi)
+    len = prod(length.(xyz))
+
+    moms = map(xyz) do _
+        Vector{T}(undef, len)
+    end
+
+    integrate_threaded!(moms, Tuple{1}, f, xyz, bc; method=method)
+end
+
+# 1D surface - threaded version
+function integrate_threaded!(moms, ::Type{Tuple{1}}, f, xyz::NTuple{1}, bc; method=:vofi)
+    input = only.(axes.(xyz))
+    linear = LinearIndices(input)
+
+    x, = xyz
+
+    # Use @threads for parallel execution
+    Threads.@threads for n in collect(linear)
+        xex = zeros(Cdouble, 4)
+        moms[1][n] = vofinit_dispatch!(method, xex, f, x[n])
+    end
+
+    return moms
+end
+
+# 2D surface - threaded version
+function integrate_threaded!(moms, ::Type{Tuple{1}}, f, xyz::NTuple{2}, bc; method=:vofi)
+    input = only.(axes.(xyz))
+    linear = LinearIndices(input)
+
+    x, y = xyz
+
+    # x faces
+    output = input[1], droplast(input[2])
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[1][n] = vofinit_dispatch!(method, xex, f, x[i],
+                                      SVector(y[j], y[j+1]))
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[1][n] = bc(eltype(moms[1]))
+    end
+
+    # y faces
+    output = droplast(input[1]), input[2]
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[2][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      y[j])
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[2][n] = bc(eltype(moms[2]))
+    end
+
+    return moms
+end
+
+# 3D surface - threaded version
+function integrate_threaded!(moms, ::Type{Tuple{1}}, f, xyz::NTuple{3}, bc; method=:vofi)
+    input = only.(axes.(xyz))
+    linear = LinearIndices(input)
+
+    x, y, z = xyz
+
+    # x faces
+    output = input[1], droplast(input[2]), droplast(input[3])
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j, k = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[1][n] = vofinit_dispatch!(method, xex, f, x[i],
+                                      SVector(y[j], y[j+1]),
+                                      SVector(z[k], z[k+1]))
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[1][n] = bc(eltype(moms[1]))
+    end
+
+    # y faces
+    output = droplast(input[1]), input[2], droplast(input[3])
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j, k = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[2][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      y[j],
+                                      SVector(z[k], z[k+1]))
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[2][n] = bc(eltype(moms[2]))
+    end
+
+    # z faces
+    output = droplast(input[1]), droplast(input[2]), input[3]
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j, k = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[3][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      SVector(y[j], y[j+1]),
+                                      z[k])
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[3][n] = bc(eltype(moms[3]))
+    end
+
+    return moms
+end
+
+# 4D surface - threaded version
+function integrate_threaded!(moms, ::Type{Tuple{1}}, f, xyz::NTuple{4}, bc; method=:vofijul)
+    input = only.(axes.(xyz))
+    linear = LinearIndices(input)
+
+    x, y, z, w = xyz
+
+    # x faces
+    output = input[1], droplast(input[2]), droplast(input[3]), droplast(input[4])
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j, k, l = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[1][n] = vofinit_dispatch!(method, xex, f, x[i],
+                                      SVector(y[j], y[j+1]),
+                                      SVector(z[k], z[k+1]),
+                                      SVector(w[l], w[l+1]))
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[1][n] = bc(eltype(moms[1]))
+    end
+
+    # y faces
+    output = droplast(input[1]), input[2], droplast(input[3]), droplast(input[4])
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j, k, l = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[2][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      y[j],
+                                      SVector(z[k], z[k+1]),
+                                      SVector(w[l], w[l+1]))
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[2][n] = bc(eltype(moms[2]))
+    end
+
+    # z faces
+    output = droplast(input[1]), droplast(input[2]), input[3], droplast(input[4])
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j, k, l = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[3][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      SVector(y[j], y[j+1]),
+                                      z[k],
+                                      SVector(w[l], w[l+1]))
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[3][n] = bc(eltype(moms[3]))
+    end
+    
+    # w faces
+    output = droplast(input[1]), droplast(input[2]), droplast(input[3]), input[4]
+    cartesian = CartesianIndices(output)
+    cartesian_arr = collect(cartesian)
+
+    Threads.@threads for idx in eachindex(cartesian_arr)
+        index = cartesian_arr[idx]
+        n = linear[index]
+        i, j, k, l = Tuple(index)
+        xex = zeros(Cdouble, 4)
+
+        moms[4][n] = vofinit_dispatch!(method, xex, f, SVector(x[i], x[i+1]),
+                                      SVector(y[j], y[j+1]),
+                                      SVector(z[k], z[k+1]),
+                                      w[l])
+    end
+
+    halo = EdgeIterator(CartesianIndices(input), cartesian)
+    for index in halo
+        n = linear[index]
+        moms[4][n] = bc(eltype(moms[4]))
+    end
+
+    return moms
+end
